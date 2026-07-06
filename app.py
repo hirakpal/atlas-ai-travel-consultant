@@ -12,7 +12,6 @@ st.set_page_config(page_title="Atlas Agentic Council", layout="wide")
 if "GEMINI_API_KEY" not in st.secrets:
     st.error("GEMINI_API_KEY is missing from secrets.")
     st.stop()
-
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
 # --- 3. SESSION STATE ---
@@ -25,17 +24,16 @@ if "messages" not in st.session_state: st.session_state.messages = []
 
 # --- 4. COUNCIL LOGIC ---
 def run_agent_council(user_input):
-    model = genai.GenerativeModel("gemini-3.5-flash")
-    
+    model = genai.GenerativeModel("gemini-1.5-flash")
     prompt = f"""
     You are a travel planning agent. 
     Current DNA: {json.dumps(st.session_state.dna_vector)}.
-    Current Location Center: {st.session_state.map_center} (DO NOT LEAVE THIS AREA unless explicitly told to change city).
+    Current Location: {st.session_state.map_center}.
     User Request: {user_input}.
-    Task : Return a valid JSON string (no markdown, no other text) with these keys:
-    "response_text", "map_center" (list: [lat, lon]), "zoom" (int), "poi_markers" (list of dicts with "name", "coords" [lat, lon], "type_color"), "dna_updates" (dict).
+    Task: Return valid JSON (no markdown) with these keys:
+    "response_text", "map_center" (list: [lat, lon]), "zoom" (int), 
+    "poi_markers" (list of dicts: name, coords, type_color), "dna_updates" (dict).
     """
-    
     try:
         response = model.generate_content(prompt)
         text = response.text.replace('```json', '').replace('```', '').strip()
@@ -43,13 +41,12 @@ def run_agent_council(user_input):
     except Exception as e:
         return None, str(e)
 
-# --- 5. UI ---
+# --- 5. UI LAYOUT ---
 col1, col2 = st.columns([1, 1])
 
 with col1:
     st.title("🌍 Atlas Agentic Council")
     chat_container = st.container(height=500)
-    
     for msg in st.session_state.messages:
         with chat_container: st.chat_message(msg["role"]).write(msg["content"])
 
@@ -60,7 +57,6 @@ with col1:
         with chat_container:
             with st.status("Council is deliberating...", expanded=True) as status:
                 ai_data, error = run_agent_council(user_input)
-                
                 if error:
                     st.error(f"Planning Failed: {error}")
                     status.update(label="System Error", state="error")
@@ -70,28 +66,18 @@ with col1:
                     st.session_state.poi_markers = ai_data["poi_markers"]
                     for k, v in ai_data.get("dna_updates", {}).items():
                         st.session_state.dna_vector[k] = min(100, st.session_state.dna_vector[k] + v)
-                    
                     st.chat_message("assistant").write(ai_data["response_text"])
                     st.session_state.messages.append({"role": "assistant", "content": ai_data["response_text"]})
                     status.update(label="Council Decision Complete", state="complete")
         st.rerun()
 
 with col2:
-with right:
     st.subheader("🧬 Travel DNA")
-    # Radar chart code indented 4 spaces
-    st_echarts(options={
-        "radar": {"indicator": [{"name": k, "max": 100} for k in st.session_state.dna_vector.keys()]}, 
-        "series": [{"type": "radar", "data": [{"value": list(st.session_state.dna_vector.values())}]}]
-    }, height="300px")
+    st_echarts(options={"radar": {"indicator": [{"name": k, "max": 100} for k in st.session_state.dna_vector.keys()]}, 
+                        "series": [{"type": "radar", "data": [{"value": list(st.session_state.dna_vector.values())}]}]}, height="300px")
 
     st.subheader("📍 Interactive Map")
-    # Map code indented 4 spaces
     m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="CartoDB positron")
     for poi in st.session_state.poi_markers:
-        folium.Marker(
-            location=poi["coords"], 
-            popup=poi["name"], 
-            icon=folium.Icon(color=poi.get("type_color", "blue"))
-        ).add_to(m)
+        folium.Marker(location=poi["coords"], popup=poi["name"], icon=folium.Icon(color=poi.get("type_color", "blue"))).add_to(m)
     st_folium(m, height=400, use_container_width=True)
