@@ -46,28 +46,33 @@ with col1:
     for msg in st.session_state.messages:
         with chat_container: st.chat_message(msg["role"]).write(msg["content"])
 
+# --- REPLACEMENT INPUT HANDLER ---
 if user_input := st.chat_input("Where do you want to explore?"):
+    # 1. Update session state immediately
     st.session_state.messages.append({"role": "user", "content": user_input})
-    with chat_container: st.chat_message("user").write(user_input)
     
+    # 2. Run Council inside a single-pass block
     with chat_container:
+        st.chat_message("user").write(user_input)
         with st.status("Atlas is planning...", expanded=True) as status:
             ai_data, error = run_agent_council(user_input)
             
             if error:
-                friendly_msg = translate_error(error)
-                st.error(f"Atlas Log: {friendly_msg}")
                 status.update(label="Planning Failed", state="error")
+                st.error(f"Atlas Log: {translate_error(error)}")
             else:
-                # Update State only if success
+                # Update map and DNA state
                 st.session_state.map_center = ai_data.get("map_center", [20, 0])
                 st.session_state.map_zoom = ai_data.get("zoom", 2)
                 st.session_state.poi_markers = ai_data.get("poi_markers", [])
                 
-                st.chat_message("assistant").write(ai_data.get("response_text", "Ready!"))
-                st.session_state.messages.append({"role": "assistant", "content": ai_data["response_text"]})
+                # Update chat history
+                st.session_state.messages.append({"role": "assistant", "content": ai_data.get("response_text", "Ready!")})
                 status.update(label="Planning Complete!", state="complete")
-        st.rerun()
+        
+        # 3. Final display only after logic completes
+        if not error:
+            st.chat_message("assistant").write(ai_data.get("response_text", "Ready!"))
 with col2:
     st.subheader("📍 Interactive Map")
     m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="CartoDB positron")
