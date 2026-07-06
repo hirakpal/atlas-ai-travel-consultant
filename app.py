@@ -12,7 +12,7 @@ if "GEMINI_API_KEY" not in st.secrets:
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     # We use 'gemini-1.5-flash' as the primary test
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-3.5-flash')
     response = model.generate_content("Hello, are you working?")
     st.success("Connection Successful!")
     st.write("Model Response:", response.text)
