@@ -68,7 +68,7 @@ with col1:
 with col2:
     # Radar
     st.subheader("Travel DNA Profile")
-    st_echarts(options={"radar": {"indicator": [{"name": k, "max": 100} for k in st.session_state.dna_vector.keys()]}, "series": [{"type": "radar", "data": [{"value": list(st.session_state.dna_vector.values()), "itemStyle": {"color": "#00f2ff"}}]}]}, height="300px")
+    st_echarts(options={"radar": {"indicator": [{"name": k, "max": 100} for k in st.session_state.dna_vector.keys()]}, "series": [{"type": "radar", "data": [{"value": list(st.session_state.dna_vector.values()), "itemStyle": {"color": "#00f2ff"}}]}]}, height="280px")
     
     # Interactive Map
     st.subheader("Destinations shortlist")
