@@ -8,7 +8,6 @@ import folium
 
 # --- 1. CONFIG & STATE ---
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
 # Add missing coordinates dictionary
 CITY_COORDINATES = {
     "Bali": [-8.3405, 115.0920], 
@@ -16,6 +15,7 @@ CITY_COORDINATES = {
     "Kyoto": [35.0116, 135.7681],
     "Delhi": [28.6139, 77.2090]
 }
+
 if "dna_vector" not in st.session_state:
     st.session_state.dna_vector = {k: 50 for k in ["Adventure", "Relaxation", "Photography", "Luxury", "Budget Conscious", "Sustainability", "Culture", "Food Explorer", "Shopping", "Nightlife", "Family Focus", "Nature"]}
 if "messages" not in st.session_state: st.session_state.messages = []
