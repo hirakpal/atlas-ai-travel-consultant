@@ -44,7 +44,7 @@ def log_audit(status, event_type, details):
 
 # --- 4. ENGINE LOGIC ---
 def run_agent_council(user_input):
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-3.5-flash")
     
     prompt = f"""
     You are the Atlas Agentic Council. Your objective is to build a rich conversational profile for a traveler while simultaneously satisfying a state-driven travel plan.
