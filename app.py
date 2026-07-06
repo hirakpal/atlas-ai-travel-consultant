@@ -46,24 +46,6 @@ def run_agent_council(user_input):
         return json.loads(response.text)
     except Exception as e:
         return {"response_text": "I had trouble connecting. Let's try again?", "dna_updates": {}, "shortlist": []}
-
-# --- 3. UI LAYOUT ---
-col1, col2 = st.columns([1, 1])
-
-with col1:
-    st.markdown("### 🤖 Atlas - AI Travel Consultant")
-    # --- ADD THE PILLBOX HERE ---
-    st.markdown("""
-        <div style="display:flex; gap: 10px; margin-bottom: 20px;">
-            <span style="padding: 5px 12px; border-radius: 15px; background: #1f2937; color: #60a5fa; font-size: 11px; border: 1px solid #374151;">● Researcher</span>
-            <span style="padding: 5px 12px; border-radius: 15px; background: #1f2937; color: #34d399; font-size: 11px; border: 1px solid #374151;">● Generator</span>
-            <span style="padding: 5px 12px; border-radius: 15px; background: #1f2937; color: #f87171; font-size: 11px; border: 1px solid #374151;">● Critic</span>
-        </div>
-    """, unsafe_allow_html=True)
-    chat_container = st.container(height=500)
-    for msg in st.session_state.messages:
-        with chat_container: st.chat_message(msg["role"]).write(msg["content"])
-
 # --- ATOMIC UI EXECUTION ---
 if user_input := st.chat_input("Tell Atlas where you want to go..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
@@ -81,6 +63,24 @@ if user_input := st.chat_input("Tell Atlas where you want to go..."):
         
     st.session_state.messages.append({"role": "assistant", "content": ai_data["response_text"]})
     st.rerun() # Force UI refresh
+# --- 3. UI LAYOUT ---
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.markdown("### 🤖 Atlas - AI Travel Consultant")
+    # --- ADD THE PILLBOX HERE ---
+    st.markdown("""
+        <div style="display:flex; gap: 10px; margin-bottom: 20px;">
+            <span style="padding: 5px 12px; border-radius: 15px; background: #1f2937; color: #60a5fa; font-size: 11px; border: 1px solid #374151;">● Researcher</span>
+            <span style="padding: 5px 12px; border-radius: 15px; background: #1f2937; color: #34d399; font-size: 11px; border: 1px solid #374151;">● Generator</span>
+            <span style="padding: 5px 12px; border-radius: 15px; background: #1f2937; color: #f87171; font-size: 11px; border: 1px solid #374151;">● Critic</span>
+        </div>
+    """, unsafe_allow_html=True)
+    chat_container = st.container(height=500)
+    for msg in st.session_state.messages:
+        with chat_container: st.chat_message(msg["role"]).write(msg["content"])
+
+
 
 with col2:
     # Radar
