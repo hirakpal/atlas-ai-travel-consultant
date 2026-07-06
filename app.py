@@ -18,15 +18,9 @@ genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 if "dna_vector" not in st.session_state:
     st.session_state.dna_vector = {k: 50 for k in ["Adventure", "Relaxation", "Photography", "Luxury", "Budget Conscious", "Sustainability", "Culture", "Food Explorer", "Shopping", "Nightlife", "Family Focus", "Nature"]}
 
-# Core Profiling State Machinery
 if "profile" not in st.session_state:
     st.session_state.profile = {
-        "essential_trip_info": {
-            "destination": None,
-            "travel_dates": None,
-            "budget_range": None,
-            "traveler_count": None
-        },
+        "essential_trip_info": {"destination": None, "travel_dates": None, "budget_range": None, "traveler_count": None},
         "inferred_preferences": [],
         "long_term_traits": []
     }
@@ -36,56 +30,96 @@ if "map_zoom" not in st.session_state: st.session_state.map_zoom = 2
 if "poi_markers" not in st.session_state: st.session_state.poi_markers = []
 if "messages" not in st.session_state: st.session_state.messages = []
 
+# Audit log initialization
+if "audit_trail" not in st.session_state:
+    st.session_state.audit_trail = []
+
+def log_audit(status, event_type, details):
+    """Appends an operational record to our system log."""
+    st.session_state.audit_trail.insert(0, {
+        "status": status,
+        "type": event_type,
+        "details": details
+    })
+
 # --- 4. ENGINE LOGIC ---
 def run_agent_council(user_input):
-    model = genai.GenerativeModel("gemini-3.5-flash")
+    model = genai.GenerativeModel("gemini-1.5-flash")
     
     prompt = f"""
     You are the Atlas Agentic Council. Your objective is to build a rich conversational profile for a traveler while simultaneously satisfying a state-driven travel plan.
 
     CURRENT PROFILE STATE:
-    {json.dumps(st.session_state.profile, indent=2)}
+    {json.dumps(st.session_state.profile)}
     
     CURRENT TRAVEL DNA MATRIX:
-    {json.dumps(st.session_state.dna_vector, indent=2)}
+    {json.dumps(st.session_state.dna_vector)}
 
     USER REQUEST/RESPONSE:
     "{user_input}"
 
     TASK PROTOCOL:
-    1. EXTRACT: Read the user's input. Parse out destinations, explicit trip information, or implicit style indicators.
-    2. CONTEXT CHECK: 
-       - Look closely at "essential_trip_info". If any keys ('destination', 'travel_dates', 'budget_range', 'traveler_count') are null, look for them in the user input and populate them.
-       - If some essential keys are still missing, your "response_text" MUST focus primarily on asking a context-aware follow-up question to discover those variables.
-       - If all essential keys are filled, pivot entirely to recommending contextual POIs and customized insights.
-    3. INFER TRAITS: Dynamically deduce long term traits or short term preferences based on user wording (e.g. "I love walking around historical sites" means adding 'History Buff' to long_term_traits and incrementing 'Culture' in DNA).
+    1. EXTRACT variables for 'destination', 'travel_dates', 'budget_range', 'traveler_count'.
+    2. If fields are missing, ask an organic follow-up question. 
+    3. Deduce long term traits and update DNA matrix properties using deltas.
 
-    OUTPUT SPECS: Return a clean, valid raw JSON object string. Do not include markdown wraps (like ```json). Use these exact keys:
+    OUTPUT SPECS: Return a clean, valid raw JSON object string ONLY. Do not include markdown wraps (like ```json). Use these exact keys:
     {{
-        "response_text": "Your direct message or progressive profiling question to the user",
-        "essential_trip_info": {{ "destination": "string or null", "travel_dates": "string or null", "budget_range": "string or null", "traveler_count": "string or null" }},
-        "inferred_preferences": ["list of strings"],
-        "long_term_traits": ["list of strings"],
-        "dna_updates": {{ "DNA_Key": integer_delta_to_add_or_subtract }},
+        "response_text": "text",
+        "essential_trip_info": {{ "destination": val, "travel_dates": val, "budget_range": val, "traveler_count": val }},
+        "inferred_preferences": [],
+        "long_term_traits": [],
+        "dna_updates": {{}},
         "map_center": [lat, lon],
         "zoom": int,
-        "poi_markers": [ {{ "name": "POI Name", "coords": [lat, lon], "type_color": "blue/red/green/orange" }} ]
+        "poi_markers": [ {{ "name": "string", "coords": [lat, lon], "type_color": "string" }} ]
     }}
     """
     try:
+        log_audit("INFO", "API Request Outbound", f"Prompt text prepared for input: '{user_input}'")
         response = model.generate_content(prompt)
-        text = response.text.replace('```json', '').replace('```', '').strip()
-        return json.loads(text), None
+        raw_text = response.text
+        log_audit("INFO", "API Response Inbound", f"Raw text returned from LLM: {raw_text[:200]}...")
+        
+        # Clean potential markdown string responses safely
+        clean_text = raw_text.replace('```json', '').replace('```', '').strip()
+        parsed_json = json.loads(clean_text)
+        
+        log_audit("SUCCESS", "JSON Parse Complete", "Successfully converted text engine to local dictionary schema.")
+        return parsed_json, None
     except Exception as e:
-        return None, str(e)
+        error_msg = str(e)
+        log_audit("CRITICAL", "Engine Call Failed", f"Exception dropped during generation/parsing: {error_msg}")
+        return None, error_msg
 
-# --- 5. UI LAYOUT ---
+# --- 5. AUDIT TRAIL SIDEBAR (The 3rd Column/Panel) ---
+with st.sidebar:
+    st.title("🛡️ System Audit Trail")
+    st.caption("Live pipeline execution state updates & error reporting.")
+    
+    if st.button("Clear Audit Log"):
+        st.session_state.audit_trail = []
+        st.rerun()
+        
+    st.write("---")
+    
+    if not st.session_state.audit_trail:
+        st.info("No system transactions captured yet.")
+    else:
+        for log in st.session_state.audit_trail:
+            if log["status"] == "CRITICAL":
+                st.error(f"**[{log['status']}] {log['type']}**\n\n{log['details']}")
+            elif log["status"] == "SUCCESS":
+                st.success(f"**[{log['status']}] {log['type']}**\n\n{log['details']}")
+            else:
+                st.info(f"**[{log['status']}] {log['type']}**\n\n{log['details']}")
+
+# --- 6. MAIN UI LAYOUT ---
 col1, col2 = st.columns([1, 1])
 
 with col1:
     st.title("🌍 Atlas Agentic Council")
     
-    # Static Chat Box Container
     chat_box = st.container(height=450)
     with chat_box:
         for msg in st.session_state.messages:
@@ -96,39 +130,35 @@ with col1:
             st.chat_message("user").write(user_input)
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        with st.spinner("Council is building your profiling architecture..."):
+        with st.spinner("Council is deliberating..."):
             ai_data, error = run_agent_council(user_input)
             
             if error:
-                st.error(f"Council Deliberation Error: {error}")
+                # Error is no longer hidden! It's explicitly logged to the screen
+                st.error(f"Execution Halted. Review the System Audit Trail in the sidebar.")
             else:
-                # Atomically Update Profile Variables
+                # Apply data properties safely
                 for key in st.session_state.profile["essential_trip_info"].keys():
                     if ai_data.get("essential_trip_info", {}).get(key):
                         st.session_state.profile["essential_trip_info"][key] = ai_data["essential_trip_info"][key]
                 
-                # Append traits without duplicating
                 st.session_state.profile["inferred_preferences"] = list(set(st.session_state.profile["inferred_preferences"] + ai_data.get("inferred_preferences", [])))
                 st.session_state.profile["long_term_traits"] = list(set(st.session_state.profile["long_term_traits"] + ai_data.get("long_term_traits", [])))
                 
-                # Update Map State
                 st.session_state.map_center = ai_data.get("map_center", st.session_state.map_center)
                 st.session_state.map_zoom = ai_data.get("zoom", st.session_state.map_zoom)
                 st.session_state.poi_markers = ai_data.get("poi_markers", st.session_state.poi_markers)
                 
-                # Mutate DNA Matrix Vector
                 for k, v in ai_data.get("dna_updates", {}).items():
                     if k in st.session_state.dna_vector:
                         st.session_state.dna_vector[k] = max(0, min(100, st.session_state.dna_vector[k] + v))
                 
-                # Write Assistant Output & Save
                 with chat_box:
                     st.chat_message("assistant").write(ai_data["response_text"])
                 st.session_state.messages.append({"role": "assistant", "content": ai_data["response_text"]})
         st.rerun()
 
-    # Profiling Verification Pane
-    with st.expander("🔍 Real-time Profile JSON Schema Tracker", expanded=True):
+    with st.expander("🔍 Real-time Profile JSON Schema Tracker", expanded=False):
         st.json(st.session_state.profile)
 
 with col2:
