@@ -21,6 +21,15 @@ if "map_zoom" not in st.session_state: st.session_state.map_zoom = 2
 if "poi_markers" not in st.session_state: st.session_state.poi_markers = []
 if "messages" not in st.session_state: st.session_state.messages = []
 
+# --- DEBUGGING: MODEL ACCESS ---
+try:
+    models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    st.sidebar.write("Available models:", models)
+    if not models:
+        st.error("Your API key is valid, but it has no models assigned to it. Check Google AI Studio.")
+except Exception as e:
+    st.error(f"API Connection Error: {e}")
+
 # --- AUDIT & TRANSLATION HELPER ---
 def translate_error(error_msg):
     # Translates raw API errors into human-friendly explanations
