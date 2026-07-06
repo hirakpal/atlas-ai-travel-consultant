@@ -18,6 +18,26 @@ except KeyError:
 
 genai.configure(api_key=api_key)
 
+# --- 3. Model Discovery ---
+st.title("Model Discovery")
+
+st.write("Checking available models...")
+
+# List all models and filter for those that support generateContent
+try:
+    available_models = []
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods:
+            available_models.append(m.name)
+            st.write(f"✅ Found: **{m.name}**")
+            
+    if not available_models:
+        st.error("No models found that support generateContent. Check your API key permissions.")
+except Exception as e:
+    st.error(f"Error accessing API: {e}")
+    st.write("Ensure your API key is correct and has access to the Generative Language API.")
+    
+
 # --- 3. DATA & STATE ---
 DNA_KEYS = ["Adventure", "Relaxation", "Photography", "Luxury", "Budget Conscious", "Sustainability", "Culture", "Food Explorer", "Shopping", "Nightlife", "Family Focus", "Nature"]
 CITY_COORDINATES = {"Bali": [-8.3405, 115.0920], "Lisbon": [38.7223, -9.1393], "Kyoto": [35.0116, 135.7681], "Delhi": [28.6139, 77.2090], "Tokyo": [35.6762, 139.6503], "Paris": [48.8566, 2.3522], "London": [51.5074, -0.1278], "Rome": [41.9028, 12.4964]}
