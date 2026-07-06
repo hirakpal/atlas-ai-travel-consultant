@@ -6,8 +6,8 @@ class TravellerIntentProfile(BaseModel):
     destination: Optional[str] = None
     trip_purpose: Optional[str] = None
     dna_vector: Dict[str, float] = {
-        "Adventure": 50.0, "Culture": 50.0, "Nature": 50.0, 
-        "Luxury": 50.0, "Budget Conscious": 50.0, "Relaxation": 50.0
+        "Adventure": 30.0, "Culture": 40.0, "Nature": 50.0, 
+        "Luxury": 60.0, "Budget Conscious": 80.0, "Relaxation": 90.0
     }
     shortlist: List[str] = []
 
