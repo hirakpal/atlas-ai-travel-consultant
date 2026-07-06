@@ -33,15 +33,25 @@ def update_dna(dna_updates):
             st.session_state.dna_vector[key] = max(0, min(100, st.session_state.dna_vector[key] + int(value)))
 
 def run_agent_council(user_input):
-    # FIXED MODEL NAME
     model = genai.GenerativeModel("gemini-1.5-flash")
-    prompt = f"Current Travel DNA: {json.dumps(st.session_state.dna_vector)}. User Request: {user_input}. Return ONLY JSON with 'response_text', 'dna_updates', and 'shortlist'."
-    
+    prompt = f"""You are Atlas, a travel consultant. 
+    Current DNA: {json.dumps(st.session_state.dna_vector)}. 
+    Request: {user_input}. 
+    Return ONLY JSON: {{"response_text": "...", "dna_updates": {{"Adventure": 5}}, "shortlist": ["Bali"]}}"""
+
     try:
-        response = model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+        response = model.generate_content(
+            prompt, 
+            generation_config={"response_mime_type": "application/json"}
+        )
         return json.loads(response.text.strip())
-    except Exception:
-        return {"response_text": "Unable to generate recommendation.", "dna_updates": {}, "shortlist": []}
+    except Exception as e:
+        # RETURN THE ACTUAL ERROR TO THE CHAT
+        return {
+            "response_text": f"DEBUG ERROR: {str(e)}", 
+            "dna_updates": {}, 
+            "shortlist": []
+        }
 
 # --- 5. UI ---
 left, right = st.columns([1, 1])
