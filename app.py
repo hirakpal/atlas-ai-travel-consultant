@@ -6,7 +6,13 @@ from streamlit_folium import st_folium
 import folium
 
 # --- 1. CONFIG ---
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+st.write("Checking secrets keys:", st.secrets.keys())
+
+if "GEMINI_API_KEY" in st.secrets:
+    st.success("GEMINI_API_KEY is found!")
+else:
+    st.error("GEMINI_API_KEY is NOT in secrets. Available keys are: " + str(st.secrets.keys()))
+    st.stop()
 
 if "dna_vector" not in st.session_state:
     st.session_state.dna_vector = {k: 50 for k in ["Adventure", "Relaxation", "Photography", "Luxury", "Budget Conscious", "Sustainability", "Culture", "Food Explorer", "Shopping", "Nightlife", "Family Focus", "Nature"]}
@@ -25,7 +31,7 @@ def translate_error(error_msg):
 
 # --- 2. VIRTUAL COUNCIL (Agentic Orchestration) ---
 def run_agent_council(user_input):
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("models/gemini-1.5-flash")
     prompt = f"Current DNA: {json.dumps(st.session_state.dna_vector)}. Request: {user_input}. Return ONLY JSON: {{\"response_text\": \"...\", \"map_center\": [0,0], \"zoom\": 2, \"poi_markers\": [], \"dna_updates\": {{}}}}"
     
     try:
