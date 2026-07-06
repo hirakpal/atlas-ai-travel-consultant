@@ -14,36 +14,48 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "shortlist" not in st.session_state: st.session_state.shortlist = []
 
 # --- 2. THE COUNCIL LOGIC (Multi-Agent Loop) ---
+# --- ATOMIC COUNCIL LOGIC ---
 def run_agent_council(user_input):
-    model = genai.GenerativeModel('gemini-3.5-flash')
-    # Force MIME type at the API level for guaranteed JSON
+    model = genai.GenerativeModel('gemini-1.5-flash')
     config = {"response_mime_type": "application/json"}
     
+    # Combined Prompt: Generator & Critic in ONE call for speed
+    prompt = f"""
+    You are Atlas, a luxury travel consultant. 
+    Current DNA: {st.session_state.dna_vector}. 
+    User: {user_input}. 
+    Act as a Council: First, generate a plan. Second, critique your own plan.
+    Return JSON: {{
+        "response_text": "text", 
+        "dna_updates": {{"Adventure": 5}}, 
+        "shortlist": ["City1"]
+    }}
+    """
+    
+    # Set a timeout for the API call
     try:
-        # STEP 1: Generator
-        prompt_gen = f"Current DNA: {st.session_state.dna_vector}. User: {user_input}. Return ONLY valid JSON: {{'response_text': 'string', 'dna_updates': {{'Adventure': 5}}, 'shortlist': ['City1']}}"
-        res_gen = model.generate_content(prompt_gen, generation_config=config)
-        plan = json.loads(res_gen.text)
-        
-        # STEP 2: Critic (Wrapped in a try-except to prevent total halt)
-        try:
-            prompt_crit = f"Critique: {plan}. Return ONLY JSON: {{'is_approved': true, 'feedback': 'none'}}"
-            res_crit = model.generate_content(prompt_crit, generation_config=config)
-            critique = json.loads(res_crit.text)
-            if not critique.get('is_approved', True):
-                plan['response_text'] += f"\n\n*Atlas Note: {critique.get('feedback', 'Refining plan...')}"
-        except:
-            pass # Critic failed? Skip it and return the original plan to keep chat alive
-            
-        return plan
-        
+        response = model.generate_content(prompt, generation_config=config, request_options={"timeout": 10})
+        return json.loads(response.text)
     except Exception as e:
-        # Return a 'safe' object so the chat doesn't crash
-        return {
-            "response_text": f"I encountered a technical hurdle: {str(e)}. Let's try again?",
-            "dna_updates": {},
-            "shortlist": []
-        }
+        return {"response_text": "I had trouble connecting. Let's try again?", "dna_updates": {}, "shortlist": []}
+
+# --- ATOMIC UI EXECUTION ---
+if user_input := st.chat_input("Tell Atlas where you want to go..."):
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    
+    # Display status
+    with st.status("Agent Council working...", expanded=True) as status:
+        ai_data = run_agent_council(user_input)
+        
+        # Immediate state update
+        for k, v in ai_data.get("dna_updates", {}).items():
+            st.session_state.dna_vector[k] += v
+        st.session_state.shortlist = ai_data.get("shortlist", [])
+        
+        status.update(label="Planning Complete!", state="complete")
+        
+    st.session_state.messages.append({"role": "assistant", "content": ai_data["response_text"]})
+    st.rerun() # Force UI refresh
 
 # --- 3. UI LAYOUT ---
 col1, col2 = st.columns([1, 1])
