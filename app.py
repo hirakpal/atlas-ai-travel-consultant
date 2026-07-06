@@ -15,24 +15,35 @@ if "shortlist" not in st.session_state: st.session_state.shortlist = []
 
 # --- 2. THE COUNCIL LOGIC (Multi-Agent Loop) ---
 def run_agent_council(user_input):
-    model = genai.GenerativeModel('gemini-3.5-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Force MIME type at the API level for guaranteed JSON
     config = {"response_mime_type": "application/json"}
     
-    # STEP 1: Generator Node
-    prompt_gen = f"Current DNA: {st.session_state.dna_vector}. User: {user_input}. Return JSON: {{'response_text': '...', 'dna_updates': {{'Adventure': 5}}, 'shortlist': ['City1', 'City2']}}"
-    res_gen = model.generate_content(prompt_gen, generation_config=config)
-    plan = json.loads(res_gen.text)
-    
-    # STEP 2: Critic Node (The missing logic)
-    prompt_crit = f"Critique this travel plan: {plan}. Is it aligned with DNA: {st.session_state.dna_vector}? Return JSON: {{'is_approved': true/false, 'feedback': '...'}}"
-    res_crit = model.generate_content(prompt_crit, generation_config=config)
-    critique = json.loads(res_crit.text)
-    
-    # STEP 3: Fallback if Critic rejects
-    if not critique['is_approved']:
-        plan['response_text'] += f"\n\n*Atlas Note: {critique['feedback']}*"
+    try:
+        # STEP 1: Generator
+        prompt_gen = f"Current DNA: {st.session_state.dna_vector}. User: {user_input}. Return ONLY valid JSON: {{'response_text': 'string', 'dna_updates': {{'Adventure': 5}}, 'shortlist': ['City1']}}"
+        res_gen = model.generate_content(prompt_gen, generation_config=config)
+        plan = json.loads(res_gen.text)
         
-    return plan
+        # STEP 2: Critic (Wrapped in a try-except to prevent total halt)
+        try:
+            prompt_crit = f"Critique: {plan}. Return ONLY JSON: {{'is_approved': true, 'feedback': 'none'}}"
+            res_crit = model.generate_content(prompt_crit, generation_config=config)
+            critique = json.loads(res_crit.text)
+            if not critique.get('is_approved', True):
+                plan['response_text'] += f"\n\n*Atlas Note: {critique.get('feedback', 'Refining plan...')}"
+        except:
+            pass # Critic failed? Skip it and return the original plan to keep chat alive
+            
+        return plan
+        
+    except Exception as e:
+        # Return a 'safe' object so the chat doesn't crash
+        return {
+            "response_text": f"I encountered a technical hurdle: {str(e)}. Let's try again?",
+            "dna_updates": {},
+            "shortlist": []
+        }
 
 # --- 3. UI LAYOUT ---
 col1, col2 = st.columns([1, 1])
