@@ -53,22 +53,32 @@ with col1:
     for msg in st.session_state.messages:
         with chat_container: st.chat_message(msg["role"]).write(msg["content"])
 
-    if user_input := st.chat_input("Where do you want to explore?"):
+if user_input := st.chat_input("Where do you want to explore?"):
         st.session_state.messages.append({"role": "user", "content": user_input})
-        with st.chat_message("assistant"):
+        with chat_container: 
+            st.chat_message("user").write(user_input)
+        
+        with chat_container:
             with st.status("Council is deliberating...", expanded=True) as status:
-                ai_data = run_agent_council(user_input)
-                
-                # Update State
-                st.session_state.map_center = ai_data["map_center"]
-                st.session_state.map_zoom = ai_data["zoom"]
-                st.session_state.poi_markers = ai_data["poi_markers"]
-                for k, v in ai_data.get("dna_updates", {}).items():
-                    st.session_state.dna_vector[k] += v
-                
-                status.update(label="Council Decision Complete", state="complete")
-            st.write(ai_data["response_text"])
-        st.session_state.messages.append({"role": "assistant", "content": ai_data["response_text"]})
+                try:
+                    ai_data = run_agent_council(user_input)
+                    
+                    # VALIDATION: Check if data exists
+                    if "map_center" in ai_data:
+                        st.session_state.map_center = ai_data["map_center"]
+                        st.session_state.map_zoom = ai_data["zoom"]
+                        st.session_state.poi_markers = ai_data["poi_markers"]
+                        
+                        status.update(label="Council Decision Complete", state="complete")
+                        st.chat_message("assistant").write(ai_data["response_text"])
+                        st.session_state.messages.append({"role": "assistant", "content": ai_data["response_text"]})
+                    else:
+                        st.error("Council returned invalid data format.")
+                        status.update(label="Council failed to output valid JSON", state="error")
+                except Exception as e:
+                    st.error(f"Execution Error: {e}")
+                    status.update(label="Critical System Error", state="error")
+        
         st.rerun()
 
 with col2:
