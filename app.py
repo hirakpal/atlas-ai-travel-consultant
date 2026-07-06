@@ -38,6 +38,15 @@ def run_agent_council(user_input):
 col1, col2 = st.columns([1, 1])
 
 with col1:
+    st.markdown("### 🤖 Atlas - AI Travel Consultant")
+    # --- ADD THE PILLBOX HERE ---
+    st.markdown("""
+        <div style="display:flex; gap: 10px; margin-bottom: 20px;">
+            <span style="padding: 5px 12px; border-radius: 15px; background: #1f2937; color: #60a5fa; font-size: 11px; border: 1px solid #374151;">● Researcher</span>
+            <span style="padding: 5px 12px; border-radius: 15px; background: #1f2937; color: #34d399; font-size: 11px; border: 1px solid #374151;">● Generator</span>
+            <span style="padding: 5px 12px; border-radius: 15px; background: #1f2937; color: #f87171; font-size: 11px; border: 1px solid #374151;">● Critic</span>
+        </div>
+    """, unsafe_allow_html=True)
     chat_container = st.container(height=500)
     for msg in st.session_state.messages:
         with chat_container: st.chat_message(msg["role"]).write(msg["content"])
