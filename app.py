@@ -47,39 +47,32 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.title("🌍 Atlas Agentic Council")
     chat_container = st.container(height=500)
+    
     for msg in st.session_state.messages:
-        with chat_container: st.chat_message(msg["role"]).write(msg["content"])
+        with chat_container:
+            st.chat_message(msg["role"]).write(msg["content"])
 
     if user_input := st.chat_input("Where do you want to explore?"):
-        # 1. Update history
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        # 2. Force immediate display of user message
         with chat_container:
             st.chat_message("user").write(user_input)
-            
-            # 3. Direct API call (No status widget to avoid rendering stalls)
             with st.spinner("Atlas is planning..."):
                 ai_data, error = run_agent_council(user_input)
                 
                 if error:
                     st.error(f"Planning Failed: {error}")
                 else:
-                    # Update State
                     st.session_state.map_center = ai_data.get("map_center", [20, 0])
                     st.session_state.map_zoom = ai_data.get("zoom", 2)
                     st.session_state.poi_markers = ai_data.get("poi_markers", [])
                     
-                    # Update DNA
                     for k, v in ai_data.get("dna_updates", {}).items():
                         if k in st.session_state.dna_vector:
                             st.session_state.dna_vector[k] = min(100, st.session_state.dna_vector[k] + v)
                     
-                    # Update Assistant Response
                     st.chat_message("assistant").write(ai_data["response_text"])
                     st.session_state.messages.append({"role": "assistant", "content": ai_data["response_text"]})
-                    
-        # 4. Rerun once to update map and charts
         st.rerun()
 
 with col2:
