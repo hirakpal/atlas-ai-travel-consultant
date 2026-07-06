@@ -77,7 +77,7 @@ with col1:
         st.rerun()
 
 with col2:
-    with right:
+with right:
     st.subheader("🧬 Travel DNA")
     # This radar chart now pulls directly from persistent session state
     radar_options = {
