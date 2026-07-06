@@ -33,7 +33,7 @@ def update_dna(dna_updates):
             st.session_state.dna_vector[key] = max(0, min(100, st.session_state.dna_vector[key] + int(value)))
 
 def run_agent_council(user_input):
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-1.5-pro")
     prompt = f"""You are Atlas, a travel consultant. 
     Current DNA: {json.dumps(st.session_state.dna_vector)}. 
     Request: {user_input}. 
