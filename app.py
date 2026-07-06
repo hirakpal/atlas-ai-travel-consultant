@@ -138,7 +138,7 @@ def apply*dna_updates(dna_updates):
     for *, v in dna_updates.items():
       * if k in st.session_state.dna_vect*r:
             st.session_state.dn*_vector[k] = clamp_score(
-        *       st.session_state.dna_vector*k] + int(v)
+        *       st.session_state.dna_vector[k] + int(v)
             )
 
 
