@@ -15,33 +15,26 @@ if "map_zoom" not in st.session_state: st.session_state.map_zoom = 2
 if "poi_markers" not in st.session_state: st.session_state.poi_markers = []
 if "messages" not in st.session_state: st.session_state.messages = []
 
+# --- AUDIT & TRANSLATION HELPER ---
+def translate_error(error_msg):
+    # Translates raw API errors into human-friendly explanations
+    if "404" in error_msg: return "I'm having trouble connecting to my specialized planning module. Please check my model access."
+    if "401" in error_msg or "403" in error_msg: return "I don't have permission to access the planning tools. Please check my API configuration."
+    if "JSON" in error_msg: return "I had a moment of confusion and couldn't format the travel plan correctly. Let me try again."
+    return f"I encountered an unexpected hiccup: {error_msg}"
+
 # --- 2. VIRTUAL COUNCIL (Agentic Orchestration) ---
 def run_agent_council(user_input):
     model = genai.GenerativeModel("gemini-1.5-flash")
+    prompt = f"Current DNA: {json.dumps(st.session_state.dna_vector)}. Request: {user_input}. Return ONLY JSON: {{\"response_text\": \"...\", \"map_center\": [0,0], \"zoom\": 2, \"poi_markers\": [], \"dna_updates\": {{}}}}"
     
-    # The Council Prompt defines the multi-step persona
-    prompt = f"""
-    You are the Atlas Council (Researcher, Generator, Critic).
-    Current State: {json.dumps(st.session_state.dna_vector)}
-    User Request: {user_input}
-    
-    Task: 
-    1. Researcher: Find coordinates/location data for the user request.
-    2. Generator: Create a travel plan and suggest relevant POIs (Hotels/Cafes).
-    3. Critic: Review the plan for luxury and feasibility.
-    
-    Return ONLY JSON:
-    {{
-        "response_text": "text",
-        "map_center": [lat, lon],
-        "zoom": 12,
-        "poi_markers": [{{"name": "Hotel A", "coords": [lat, lon], "type_color": "blue"}}],
-        "dna_updates": {{"Adventure": 5}}
-    }}
-    """
-    
-    response = model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
-    return json.loads(response.text)
+    try:
+        response = model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+        # Audit: Log the raw response to the terminal for debugging
+        print(f"AUDIT LOG - Raw Response: {response.text}")
+        return json.loads(response.text.strip()), None
+    except Exception as e:
+        return None, str(e)
 
 # --- 3. UI LAYOUT ---
 st.set_page_config(layout="wide")
@@ -54,33 +47,27 @@ with col1:
         with chat_container: st.chat_message(msg["role"]).write(msg["content"])
 
 if user_input := st.chat_input("Where do you want to explore?"):
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        with chat_container: 
-            st.chat_message("user").write(user_input)
-        
-        with chat_container:
-            with st.status("Council is deliberating...", expanded=True) as status:
-                try:
-                    ai_data = run_agent_council(user_input)
-                    
-                    # VALIDATION: Check if data exists
-                    if "map_center" in ai_data:
-                        st.session_state.map_center = ai_data["map_center"]
-                        st.session_state.map_zoom = ai_data["zoom"]
-                        st.session_state.poi_markers = ai_data["poi_markers"]
-                        
-                        status.update(label="Council Decision Complete", state="complete")
-                        st.chat_message("assistant").write(ai_data["response_text"])
-                        st.session_state.messages.append({"role": "assistant", "content": ai_data["response_text"]})
-                    else:
-                        st.error("Council returned invalid data format.")
-                        status.update(label="Council failed to output valid JSON", state="error")
-                except Exception as e:
-                    st.error(f"Execution Error: {e}")
-                    status.update(label="Critical System Error", state="error")
-        
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with chat_container: st.chat_message("user").write(user_input)
+    
+    with chat_container:
+        with st.status("Atlas is planning...", expanded=True) as status:
+            ai_data, error = run_agent_council(user_input)
+            
+            if error:
+                friendly_msg = translate_error(error)
+                st.error(f"Atlas Log: {friendly_msg}")
+                status.update(label="Planning Failed", state="error")
+            else:
+                # Update State only if success
+                st.session_state.map_center = ai_data.get("map_center", [20, 0])
+                st.session_state.map_zoom = ai_data.get("zoom", 2)
+                st.session_state.poi_markers = ai_data.get("poi_markers", [])
+                
+                st.chat_message("assistant").write(ai_data.get("response_text", "Ready!"))
+                st.session_state.messages.append({"role": "assistant", "content": ai_data["response_text"]})
+                status.update(label="Planning Complete!", state="complete")
         st.rerun()
-
 with col2:
     st.subheader("📍 Interactive Map")
     m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="CartoDB positron")
