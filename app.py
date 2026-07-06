@@ -79,20 +79,19 @@ with col1:
 with col2:
 with right:
     st.subheader("🧬 Travel DNA")
-    # This radar chart now pulls directly from persistent session state
-    radar_options = {
-        "radar": {
-            "indicator": [{"name": k, "max": 100} for k in st.session_state.dna_vector.keys()]
-        },
-        "series": [{
-            "type": "radar",
-            "data": [{"value": list(st.session_state.dna_vector.values())}]
-        }]
-    }
-    st_echarts(options=radar_options, height="300px")
-   
+    # Radar chart code indented 4 spaces
+    st_echarts(options={
+        "radar": {"indicator": [{"name": k, "max": 100} for k in st.session_state.dna_vector.keys()]}, 
+        "series": [{"type": "radar", "data": [{"value": list(st.session_state.dna_vector.values())}]}]
+    }, height="300px")
+
     st.subheader("📍 Interactive Map")
+    # Map code indented 4 spaces
     m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="CartoDB positron")
     for poi in st.session_state.poi_markers:
-        folium.Marker(location=poi["coords"], popup=poi["name"], icon=folium.Icon(color=poi["type_color"])).add_to(m)
-    st_folium(m, height=500, use_container_width=True)
+        folium.Marker(
+            location=poi["coords"], 
+            popup=poi["name"], 
+            icon=folium.Icon(color=poi.get("type_color", "blue"))
+        ).add_to(m)
+    st_folium(m, height=400, use_container_width=True)
