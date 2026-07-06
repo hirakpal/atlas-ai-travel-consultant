@@ -46,35 +46,39 @@ col1, col2 = st.columns([1, 1])
 
 with col1:
     st.title("🌍 Atlas Agentic Council")
-    chat_container = st.container(height=500)
     
-    for msg in st.session_state.messages:
-        with chat_container:
+    # Persistent container for chat history
+    chat_box = st.container(height=500)
+    
+    # Render existing messages
+    with chat_box:
+        for msg in st.session_state.messages:
             st.chat_message(msg["role"]).write(msg["content"])
 
+    # Input Handler
     if user_input := st.chat_input("Where do you want to explore?"):
+        # 1. Immediate UI update
+        with chat_box:
+            st.chat_message("user").write(user_input)
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        with chat_container:
-            st.chat_message("user").write(user_input)
-            with st.spinner("Atlas is planning..."):
-                ai_data, error = run_agent_council(user_input)
+        # 2. Logic execution
+        with st.spinner("Council is deliberating..."):
+            ai_data, error = run_agent_council(user_input)
+            
+            if error:
+                st.error(f"Council Error: {error}")
+            else:
+                # Update States
+                st.session_state.map_center = ai_data.get("map_center", [20, 0])
+                st.session_state.map_zoom = ai_data.get("zoom", 2)
+                st.session_state.poi_markers = ai_data.get("poi_markers", [])
                 
-                if error:
-                    st.error(f"Planning Failed: {error}")
-                else:
-                    st.session_state.map_center = ai_data.get("map_center", [20, 0])
-                    st.session_state.map_zoom = ai_data.get("zoom", 2)
-                    st.session_state.poi_markers = ai_data.get("poi_markers", [])
-                    
-                    for k, v in ai_data.get("dna_updates", {}).items():
-                        if k in st.session_state.dna_vector:
-                            st.session_state.dna_vector[k] = min(100, st.session_state.dna_vector[k] + v)
-                    
-                    st.chat_message("assistant").write(ai_data["response_text"])
-                    st.session_state.messages.append({"role": "assistant", "content": ai_data["response_text"]})
+                # Append and write
+                response_text = ai_data.get("response_text", "I'm ready to help!")
+                st.session_state.messages.append({"role": "assistant", "content": response_text})
+                
         st.rerun()
-
 with col2:
     st.subheader("🧬 Travel DNA")
     st_echarts(options={"radar": {"indicator": [{"name": k, "max": 100} for k in st.session_state.dna_vector.keys()]}, 
