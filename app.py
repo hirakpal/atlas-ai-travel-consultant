@@ -15,7 +15,7 @@ if "shortlist" not in st.session_state: st.session_state.shortlist = []
 
 # --- 2. THE COUNCIL LOGIC (Multi-Agent Loop) ---
 def run_agent_council(user_input):
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-3.5-flash')
     config = {"response_mime_type": "application/json"}
     
     # STEP 1: Generator Node
