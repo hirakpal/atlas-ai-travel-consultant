@@ -99,4 +99,4 @@ with col2:
     for city in st.session_state.shortlist:
         coords = CITY_COORDINATES.get(city, [0, 0])
         folium.Marker(location=coords, tooltip=city).add_to(m)
-    st_folium(m, height=300, width=500)
+    st_folium(m, height=300, use_container_width=True)
