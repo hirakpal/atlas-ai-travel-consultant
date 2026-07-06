@@ -28,9 +28,11 @@ def run_agent_council(user_input):
     model = genai.GenerativeModel("gemini-3.5-flash")
     
     prompt = f"""
-    You are a travel planning agent. Current DNA: {json.dumps(st.session_state.dna_vector)}.
+    You are a travel planning agent. 
+    Current DNA: {json.dumps(st.session_state.dna_vector)}.
+    Current Location Center: {st.session_state.map_center} (DO NOT LEAVE THIS AREA unless explicitly told to change city).
     User Request: {user_input}.
-    Return a valid JSON string (no markdown, no other text) with these keys:
+    Task : Return a valid JSON string (no markdown, no other text) with these keys:
     "response_text", "map_center" (list: [lat, lon]), "zoom" (int), "poi_markers" (list of dicts with "name", "coords" [lat, lon], "type_color"), "dna_updates" (dict).
     """
     
@@ -75,6 +77,20 @@ with col1:
         st.rerun()
 
 with col2:
+    with right:
+    st.subheader("🧬 Travel DNA")
+    # This radar chart now pulls directly from persistent session state
+    radar_options = {
+        "radar": {
+            "indicator": [{"name": k, "max": 100} for k in st.session_state.dna_vector.keys()]
+        },
+        "series": [{
+            "type": "radar",
+            "data": [{"value": list(st.session_state.dna_vector.values())}]
+        }]
+    }
+    st_echarts(options=radar_options, height="300px")
+   
     st.subheader("📍 Interactive Map")
     m = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom, tiles="CartoDB positron")
     for poi in st.session_state.poi_markers:
