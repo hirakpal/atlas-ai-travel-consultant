@@ -8,6 +8,14 @@ import folium
 
 # --- 1. CONFIG & STATE ---
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+# Add missing coordinates dictionary
+CITY_COORDINATES = {
+    "Bali": [-8.3405, 115.0920], 
+    "Lisbon": [38.7223, -9.1393], 
+    "Kyoto": [35.0116, 135.7681],
+    "Delhi": [28.6139, 77.2090]
+}
 if "dna_vector" not in st.session_state:
     st.session_state.dna_vector = {k: 50 for k in ["Adventure", "Relaxation", "Photography", "Luxury", "Budget Conscious", "Sustainability", "Culture", "Food Explorer", "Shopping", "Nightlife", "Family Focus", "Nature"]}
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -94,9 +102,10 @@ with col2:
     st_echarts(options={"radar": {"indicator": [{"name": k, "max": 100} for k in st.session_state.dna_vector.keys()]}, "series": [{"type": "radar", "data": [{"value": list(st.session_state.dna_vector.values()), "itemStyle": {"color": "#00f2ff"}}]}]}, height="280px")
     
     # Interactive Map
+    st.subheader("Travel DNA Profile")
+    st_echarts(options={"radar": {"indicator": [{"name": k, "max": 100} for k in st.session_state.dna_vector.keys()]}, "series": [{"type": "radar", "data": [{"value": list(st.session_state.dna_vector.values()), "itemStyle": {"color": "#00f2ff"}}]}]}, height="280px")
     st.subheader("Destinations shortlist")
     m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB dark_matter")
     for city in st.session_state.shortlist:
-        coords = CITY_COORDINATES.get(city, [0, 0])
-        folium.Marker(location=coords, tooltip=city).add_to(m)
+        folium.Marker(location=CITY_COORDINATES.get(city, [0, 0]), tooltip=city).add_to(m)
     st_folium(m, height=300, use_container_width=True)
