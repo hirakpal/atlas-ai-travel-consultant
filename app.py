@@ -58,10 +58,13 @@ with col1:
 
 with col2:
     # Radar
+    st.subheader("Travel DNA Profile")
     st_echarts(options={"radar": {"indicator": [{"name": k, "max": 100} for k in st.session_state.dna_vector.keys()]}, "series": [{"type": "radar", "data": [{"value": list(st.session_state.dna_vector.values()), "itemStyle": {"color": "#00f2ff"}}]}]}, height="400px")
     
     # Interactive Map
+    st.subheader("Destinations shortlist")
     m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB dark_matter")
     for city in st.session_state.shortlist:
-        folium.Marker(location=[0, 0], popup=city).add_to(m) # Note: You'd use a geocoding API here to get real coordinates
-    st_folium(m, height=300)
+        coords = CITY_COORDINATES.get(city, [0, 0])
+        folium.Marker(location=coords, tooltip=city).add_to(m)
+    st_folium(m, height=300, width=500)
